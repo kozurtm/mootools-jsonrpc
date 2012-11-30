@@ -1,39 +1,49 @@
 #!/usr/bin/env perl
+
+package MyService;
+use Mojo::Base 'MojoX::JSON::RPC::Service';
+
+sub new {
+    my $class = shift;
+    my $svc = $class->SUPER::new;
+    $svc->register(
+        'sum', \&svc_sum,
+        { with_self => 1 });
+    $svc->register(
+        'uc', \&svc_uc);
+    return $svc;
+}
+
+sub svc_sum {
+    my $self = shift;
+    $self->stash(
+        exception_handler => sub {
+            my ($self, $err, $m) = @_;
+            $m->invalid_params;
+        });
+    my $sum = 0;
+    for (@_) {
+        /^\d+$/ or die 'Invalid params';
+        $sum += $_
+    }
+    return $sum;
+} # with_self
+
+sub svc_uc {
+    return uc join(', ', @_);
+}
+
+package main;
 use Mojolicious::Lite;
-use MojoX::JSON::RPC::Service;
-use MojoX::JSON::RPC::Dispatcher::Method;
 
 get '/' => sub {
   my $self = shift;
   $self->render('index');
 };
 
-my $svc = MojoX::JSON::RPC::Service->new;
-$svc->register(
-    'sum',
-    sub {
-        my $self = shift;
-        $self->stash(
-            exception_handler => sub {
-                my ($self, $err, $m) = @_;
-                $m->invalid_params;
-            });
-        my $sum = 0;
-        for (@_) {
-            /^\d+$/ or die 'Invalid params';
-            $sum += $_
-        }
-        return $sum;
-    }, { with_self => 1 });
-$svc->register(
-    'uc',
-    sub {
-        return uc join(', ', @_);
-    });
-
 plugin 'json_rpc_dispatcher' => {
     services => {
-        '/jsonrpc' => $svc,
+        '/jsonrpc' => MyService->new,
     }};
 
 app->start;
