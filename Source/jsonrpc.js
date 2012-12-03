@@ -7,8 +7,6 @@ Request.JSONRPC = new Class({
         remoteMethod: null
     },
 
-    xid: '',
-
     initialize: function(options) {
         options = options || {};
         options.method   = 'post';
